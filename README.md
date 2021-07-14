@@ -3,7 +3,7 @@ A promise framework for Objective-C
 
 ## Usage
 
-Just like javscript Promise.
+Just like JavScript Promise.
 
 ```objc
 [EMPromise promise:^(promise_resolve_block  _Nonnull resolve, promise_reject_block  _Nonnull reject) {
