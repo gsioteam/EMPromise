@@ -44,40 +44,19 @@
     });
     
     NSMutableArray *arr = [NSMutableArray array];
-    for (NSInteger i = 0; i < 20; ++i) {
+    for (NSInteger i = 0; i < 10000; ++i) {
         [arr addObject:@(i)];
     }
     
     [EMPromise forEach:arr block:^(id  _Nonnull obj, NSUInteger idx, id  _Nonnull lastResult, promise_resolve_block  _Nonnull resolve, promise_reject_block  _Nonnull reject) {
         NSInteger sum = [lastResult integerValue] + [obj integerValue];
-        NSLog(@"sum : %d", (int)sum);
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-            resolve(@(sum));
-        });
-    }].timeout(10).then(^id _Nullable(id  _Nullable result) {
+        resolve(@(sum));
+    }].then(^id _Nullable(id  _Nullable result) {
         NSLog(@"result: %@", result);
         return nil;
     }).catchError(^(NSError *error) {
         NSLog(@"error %@", error);
     });
-    
-    __block id syncResult;
-    [EMPromise promise:^(promise_resolve_block  _Nonnull resolve, promise_reject_block  _Nonnull reject) {
-        resolve(@"hello");
-    }].then(^id _Nullable(id  _Nullable result) {
-        syncResult = result;
-        return nil;
-    });
-    NSLog(@"%@", syncResult);
-    
-    [EMPromise forEach:arr
-                 block:^(id  _Nonnull obj, NSUInteger idx, id  _Nonnull lastResult, promise_resolve_block  _Nonnull resolve, promise_reject_block  _Nonnull reject) {
-        resolve(@([lastResult integerValue] + [obj integerValue]));
-    }].then(^id _Nullable(id  _Nullable result) {
-        syncResult = result;
-        return nil;
-    });
-    NSLog(@"%@", syncResult);
     
     return YES;
 }

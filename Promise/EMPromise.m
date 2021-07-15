@@ -19,7 +19,8 @@ typedef enum {
 @implementation EMTimeoutError
 
 - (id)init {
-    self = [super initWithDomain:@"Timeout" code:1005
+    self = [super initWithDomain:@"Timeout"
+                            code:1005
                         userInfo:nil];
     return self;
 }
@@ -227,21 +228,21 @@ typedef void(^promise_result_block)(PromiseState state, id _Nullable result);
     return self;
 }
 
-+ (instancetype)promise:(promise_block)block {
++ (EMPromise *)promise:(promise_block)block {
     return [self promise:block queue:dispatch_get_main_queue()];
 }
 
-+ (instancetype)promise:(promise_block)block queue:(dispatch_queue_t)queue {
++ (EMPromise *)promise:(promise_block)block queue:(dispatch_queue_t)queue {
     EMBlockPromise *promise = [[EMBlockPromise alloc] initWithQueue:queue];
     promise.block = block;
     return promise.ready;
 }
 
-+ (instancetype)wait:(NSTimeInterval)time {
++ (EMPromise *)wait:(NSTimeInterval)time {
     return [self wait:time queue:dispatch_get_main_queue()];
 }
 
-+ (instancetype)wait:(NSTimeInterval)time queue:(nonnull dispatch_queue_t)queue {
++ (EMPromise *)wait:(NSTimeInterval)time queue:(nonnull dispatch_queue_t)queue {
     EMTimeoutPromise *promise = [[EMTimeoutPromise alloc] initWithQueue:queue];
     promise.wait = time;
     return promise.ready;
@@ -252,10 +253,16 @@ typedef void(^promise_result_block)(PromiseState state, id _Nullable result);
 }
 
 + (instancetype)resolve:(id)result queue:(dispatch_queue_t)queue {
-    EMPromise *promise = [[EMPromise alloc] initWithQueue:queue];
-    promise.state = Resolved;
-    promise.result = result;
-    return promise.ready;
+    EMPromise *promise = [[self alloc] initWithQueue:queue];
+    if ([result isKindOfClass:EMPromise.class]) {
+        [promise ready];
+        [promise runPromise:result];
+        return promise;
+    } else {
+        promise.state = Resolved;
+        promise.result = result;
+        return promise.ready;
+    }
 }
 
 + (instancetype)reject:(NSError *)error {
@@ -263,19 +270,19 @@ typedef void(^promise_result_block)(PromiseState state, id _Nullable result);
 }
 
 + (instancetype)reject:(NSError *)error queue:(dispatch_queue_t)queue {
-    EMPromise *promise = [[EMPromise alloc] initWithQueue:queue];
+    EMPromise *promise = [[self alloc] initWithQueue:queue];
     promise.state = Rejected;
     promise.result = error;
     return promise.ready;
 }
 
-+ (instancetype)forEach:(NSArray *)array block:(promise_for_each_block)block {
++ (EMPromise *)forEach:(NSArray *)array block:(promise_for_each_block)block {
     return [self forEach:array
                    block:block
                    queue:dispatch_get_main_queue()];
 }
 
-+ (instancetype)forEach:(NSArray *)array block:(promise_for_each_block)block queue:(dispatch_queue_t)queue {
++ (EMPromise *)forEach:(NSArray *)array block:(promise_for_each_block)block queue:(dispatch_queue_t)queue {
     if (array.count > 0) {
         EMForPromise *promise = [[EMForPromise alloc] initWithQueue:queue];
         promise.array = array;

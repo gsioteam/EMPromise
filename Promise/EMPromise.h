@@ -91,9 +91,6 @@ typedef EMPromise*_Nonnull(^promise_timeout_block)(NSTimeInterval timeout);
 
 typedef void(^promise_for_each_block)(id  _Nonnull obj, NSUInteger idx, id lastResult, promise_resolve_block resolve, promise_reject_block reject);
 
-/**
- * These constructors create a object of special class, they can not be used to create a object of customer subclass.
- */
 @interface EMPromise (ExtensionConstructors)
 
 + (instancetype)resolve:(id _Nullable)result;
@@ -101,14 +98,14 @@ typedef void(^promise_for_each_block)(id  _Nonnull obj, NSUInteger idx, id lastR
 + (instancetype)reject:(NSError *)error;
 + (instancetype)reject:(NSError *)error queue:(dispatch_queue_t)queue;
 
-+ (instancetype)promise:(promise_block)block;
-+ (instancetype)promise:(promise_block)block queue:(dispatch_queue_t)queue;
++ (EMPromise *)promise:(promise_block)block;
++ (EMPromise *)promise:(promise_block)block queue:(dispatch_queue_t)queue;
 
-+ (instancetype)wait:(NSTimeInterval)time;
-+ (instancetype)wait:(NSTimeInterval)time queue:(dispatch_queue_t)queue;
++ (EMPromise *)wait:(NSTimeInterval)time;
++ (EMPromise *)wait:(NSTimeInterval)time queue:(dispatch_queue_t)queue;
 
-+ (instancetype)forEach:(NSArray * _Nullable)array block:(promise_for_each_block)block;
-+ (instancetype)forEach:(NSArray * _Nullable)array block:(promise_for_each_block)block queue:(dispatch_queue_t)queue;
++ (EMPromise *)forEach:(NSArray * _Nullable)array block:(promise_for_each_block)block;
++ (EMPromise *)forEach:(NSArray * _Nullable)array block:(promise_for_each_block)block queue:(dispatch_queue_t)queue;
 
 @end
 
