@@ -87,4 +87,13 @@ __block id syncResult;
     return nil;
 });
 NSLog(@"%@", syncResult);
+
+[EMPromise forEach:arr
+              block:^(id  _Nonnull obj, NSUInteger idx, id  _Nonnull lastResult, promise_resolve_block  _Nonnull resolve, promise_reject_block  _Nonnull reject) {
+    resolve(@([lastResult integerValue] + [obj integerValue]));
+}].then(^id _Nullable(id  _Nullable result) {
+    syncResult = result;
+    return nil;
+});
+NSLog(@"%@", syncResult);
 ```
