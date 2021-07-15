@@ -76,14 +76,15 @@ typedef enum {
 
 @end
 
+typedef void(^promise_result_block)(PromiseState state, id _Nullable result);
+
 @interface EMPromise()
 
 @property (nonatomic, assign) PromiseState state;
+// To retain self when task is running.
 @property (nonatomic, strong) EMPromise *selfRef;
 @property (nonatomic, strong) id result;
-@property (nonatomic, strong) NSError *error;
-@property (nonatomic, strong) NSMutableArray<promise_resolve_block> *resolves;
-@property (nonatomic, strong) NSMutableArray<promise_reject_block> *rejects;
+@property (nonatomic, strong) NSMutableArray<promise_result_block> *callbacks;
 @property (nonatomic, strong) EMTimeout *timeoutHandler;
 
 @end
@@ -93,7 +94,7 @@ typedef enum {
 @property (nonatomic, strong) NSArray *array;
 @property (nonatomic, copy) promise_for_each_block  block;
 
-@property (nonatomic, assign) BOOL canceled;
+@property (atomic, assign) BOOL canceled;
 
 @end
 
@@ -203,8 +204,7 @@ typedef enum {
     if (self) {
 //        NSLog(@"init %@", self);
         _state = Running;
-        _resolves = [NSMutableArray new];
-        _rejects = [NSMutableArray new];
+        _callbacks = [NSMutableArray array];
         _queue = queue;
         __weak EMPromise *that = self;
         
@@ -278,7 +278,7 @@ typedef enum {
 + (instancetype)reject:(NSError *)error queue:(dispatch_queue_t)queue {
     EMPromise *promise = [[self alloc] initWithQueue:queue];
     promise.state = Rejected;
-    promise.error = error;
+    promise.result = error;
     return promise.ready;
 }
 
@@ -315,24 +315,20 @@ typedef enum {
             if (state == Resolved) {
                 @try {
                     _result = object;
-                    for (promise_resolve_block block in _resolves) {
-                        block(object);
-                    }
+                    for (promise_result_block block in _callbacks)
+                        block(_state, _result);
                 } @catch (NSException *e) {
                     _state = Rejected;
-                    _error = [[EMExceptionError alloc] initWithException:e];
-                    for (promise_reject_block block in _rejects) {
-                        block(_error);
-                    }
+                    _result = [[EMExceptionError alloc] initWithException:e];
+                    for (promise_result_block block in _callbacks)
+                        block(_state, _result);
                 }
             } else {
-                _error = object;
-                for (promise_reject_block block in _rejects) {
-                    block(object);
-                }
+                _result = object;
+                for (promise_result_block block in _callbacks)
+                    block(_state, _result);
             }
-            [_resolves removeAllObjects];
-            [_rejects removeAllObjects];
+            [_callbacks removeAllObjects];
             [self.timeoutHandler cancel];
             self.timeoutHandler = nil;
             [self clean];
@@ -370,7 +366,11 @@ typedef enum {
     [self async:^{
         switch (_state) {
             case Running:
-                [_resolves addObject:block];
+            {
+                [_callbacks addObject:^(PromiseState state, id result) {
+                    if (state == Resolved) block(result);
+                }];
+            }
                 break;
             case Resolved:
                 block(_result);
@@ -383,6 +383,7 @@ typedef enum {
 }
 
 - (EMPromise *)then:(promise_then_handler)block {
+    // Start the task if ready not called.
     [self checkStart];
     return [EMPromise promise:^(promise_resolve_block  _Nonnull resolve, promise_reject_block  _Nonnull reject) {
         [self innerThen:^(id  _Nullable result) {
@@ -395,14 +396,19 @@ typedef enum {
 }
 
 - (EMPromise *)catchError:(promise_reject_block)block {
+    // Start the task if ready not called.
     [self checkStart];
     [self async:^{
         switch (_state) {
             case Running:
-                [_rejects addObject:block];
+            {
+                [_callbacks addObject:^(PromiseState state, id result) {
+                    if (state == Rejected) block(result);
+                }];
+            }
                 break;
             case Rejected:
-                block(_error);
+                block(_result);
                 break;
                 
             default:
@@ -413,6 +419,7 @@ typedef enum {
 }
 
 - (EMPromise *)timeout:(NSTimeInterval)timeout {
+    // Start the task if ready not called.
     [self checkStart];
     [self.timeoutHandler cancel];
     __weak EMPromise *that = self;

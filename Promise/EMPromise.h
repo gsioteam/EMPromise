@@ -51,6 +51,11 @@ typedef EMPromise*_Nonnull(^promise_timeout_block)(NSTimeInterval timeout);
 
 - (EMPromise *)then:(promise_then_handler)block;
 - (EMPromise *)catchError:(promise_reject_block)block;
+
+/**
+ * Timeout return self, that means each promise could have a timer.
+ * And promise could cancel its task instantly to avoid wasting resources when timeout.
+ */
 - (EMPromise *)timeout:(NSTimeInterval)timeout;
 
 + (instancetype)promise:(promise_block)block;
@@ -66,7 +71,7 @@ typedef EMPromise*_Nonnull(^promise_timeout_block)(NSTimeInterval timeout);
  */
 - (void)run;
 /**
- * Good place to stop task
+ * A good place to stop task
  */
 - (void)clean;
 
@@ -79,6 +84,9 @@ typedef EMPromise*_Nonnull(^promise_timeout_block)(NSTimeInterval timeout);
  */
 - (void)async:(dispatch_block_t)block;
 
+/**
+ * Set the task result
+ */
 - (void)resolveWithResult:(id _Nullable)result;
 - (void)rejectWithError:(NSError *)error;
 

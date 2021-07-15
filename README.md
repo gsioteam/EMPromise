@@ -77,6 +77,7 @@ Iterator a array.
 ## Synchronized Task
 
 If the task is synchronized, you can get result synchronously. 
+That means you do not need to worry about the promise would delay the task.
 
 ```objc
 __block id syncResult;
