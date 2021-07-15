@@ -94,7 +94,7 @@ typedef EMPromise*_Nonnull(^promise_timeout_block)(NSTimeInterval timeout);
 
 typedef void(^promise_for_each_block)(id  _Nonnull obj, NSUInteger idx, id lastResult, promise_resolve_block resolve, promise_reject_block reject);
 
-@interface EMPromise (ExtensionCustuctors)
+@interface EMPromise (ExtensionConstructors)
 
 + (instancetype)resolve:(id _Nullable)result;
 + (instancetype)resolve:(id _Nullable)result queue:(dispatch_queue_t)queue;
