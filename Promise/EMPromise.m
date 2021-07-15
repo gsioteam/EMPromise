@@ -78,17 +78,6 @@ typedef enum {
 
 typedef void(^promise_result_block)(PromiseState state, id _Nullable result);
 
-@interface EMPromise()
-
-@property (nonatomic, assign) PromiseState state;
-// To retain self when task is running.
-@property (nonatomic, strong) EMPromise *selfRef;
-@property (nonatomic, strong) id result;
-@property (nonatomic, strong) NSMutableArray<promise_result_block> *callbacks;
-@property (nonatomic, strong) EMTimeout *timeoutHandler;
-
-@end
-
 @interface EMForPromise : EMPromise
 
 @property (nonatomic, strong) NSArray *array;
@@ -188,12 +177,21 @@ typedef void(^promise_result_block)(PromiseState state, id _Nullable result);
 
 - (void)run {
     __weak EMTimeoutPromise *that = self;
-    
-    self.selfRef = self;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(self.wait * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         [that resolveWithResult:nil];
     });
 }
+
+@end
+
+@interface EMPromise()
+
+@property (nonatomic, assign) PromiseState state;
+// To retain self when task is running.
+@property (nonatomic, strong) EMPromise *selfRef;
+@property (nonatomic, strong) id result;
+@property (nonatomic, strong) NSMutableArray<promise_result_block> *callbacks;
+@property (nonatomic, strong) EMTimeout *timeoutHandler;
 
 @end
 

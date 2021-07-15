@@ -92,7 +92,7 @@ typedef EMPromise*_Nonnull(^promise_timeout_block)(NSTimeInterval timeout);
 typedef void(^promise_for_each_block)(id  _Nonnull obj, NSUInteger idx, id lastResult, promise_resolve_block resolve, promise_reject_block reject);
 
 /**
- * These constructors create a object of special class, thay can not be used to create a object of customer subclass.
+ * These constructors create a object of special class, they can not be used to create a object of customer subclass.
  */
 @interface EMPromise (ExtensionConstructors)
 
