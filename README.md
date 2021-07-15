@@ -61,7 +61,7 @@ Just like JavScript Promise.
 
 ## Iterator
 
-Iterator a array. 
+Iterate a array. 
 
 ```objc
 [EMPromise forEach:arr block:^(id  _Nonnull obj, NSUInteger idx, id  _Nonnull lastResult, promise_resolve_block  _Nonnull resolve, promise_reject_block  _Nonnull reject) {
@@ -75,7 +75,7 @@ Iterator a array.
 
 ```
 
-`forEach` function only alloc one Promise object, the efficiency is 10x that of iterator by `then` function.
+`forEach` function only alloc one Promise object, the efficiency is 10x faster than the efficiency of iterating by `then` function.
 
 ## Synchronized Task
 
