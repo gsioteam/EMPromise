@@ -58,9 +58,6 @@ typedef EMPromise*_Nonnull(^promise_timeout_block)(NSTimeInterval timeout);
  */
 - (EMPromise *)timeout:(NSTimeInterval)timeout;
 
-+ (instancetype)promise:(promise_block)block;
-+ (instancetype)promise:(promise_block)block queue:(dispatch_queue_t)queue;
-
 @end
 
 @interface EMPromise (Override)
@@ -94,12 +91,18 @@ typedef EMPromise*_Nonnull(^promise_timeout_block)(NSTimeInterval timeout);
 
 typedef void(^promise_for_each_block)(id  _Nonnull obj, NSUInteger idx, id lastResult, promise_resolve_block resolve, promise_reject_block reject);
 
+/**
+ * These constructors create a object of special class, thay can not be used to create a object of customer subclass.
+ */
 @interface EMPromise (ExtensionConstructors)
 
 + (instancetype)resolve:(id _Nullable)result;
 + (instancetype)resolve:(id _Nullable)result queue:(dispatch_queue_t)queue;
 + (instancetype)reject:(NSError *)error;
 + (instancetype)reject:(NSError *)error queue:(dispatch_queue_t)queue;
+
++ (instancetype)promise:(promise_block)block;
++ (instancetype)promise:(promise_block)block queue:(dispatch_queue_t)queue;
 
 + (instancetype)wait:(NSTimeInterval)time;
 + (instancetype)wait:(NSTimeInterval)time queue:(dispatch_queue_t)queue;

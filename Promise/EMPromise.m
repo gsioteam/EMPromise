@@ -254,7 +254,7 @@ typedef void(^promise_result_block)(PromiseState state, id _Nullable result);
 }
 
 + (instancetype)resolve:(id)result queue:(dispatch_queue_t)queue {
-    EMPromise *promise = [[self alloc] initWithQueue:queue];
+    EMPromise *promise = [[EMPromise alloc] initWithQueue:queue];
     promise.state = Resolved;
     promise.result = result;
     return promise.ready;
@@ -265,7 +265,7 @@ typedef void(^promise_result_block)(PromiseState state, id _Nullable result);
 }
 
 + (instancetype)reject:(NSError *)error queue:(dispatch_queue_t)queue {
-    EMPromise *promise = [[self alloc] initWithQueue:queue];
+    EMPromise *promise = [[EMPromise alloc] initWithQueue:queue];
     promise.state = Rejected;
     promise.result = error;
     return promise.ready;
