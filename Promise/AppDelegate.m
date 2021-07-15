@@ -61,6 +61,15 @@
         NSLog(@"error %@", error);
     });
     
+    __block id syncResult;
+    [EMPromise promise:^(promise_resolve_block  _Nonnull resolve, promise_reject_block  _Nonnull reject) {
+        resolve(@"hello");
+    }].then(^id _Nullable(id  _Nullable result) {
+        syncResult = result;
+        return nil;
+    });
+    NSLog(@"%@", syncResult);
+    
     return YES;
 }
 
