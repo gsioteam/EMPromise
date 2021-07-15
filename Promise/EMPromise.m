@@ -113,7 +113,7 @@ typedef void(^promise_result_block)(PromiseState state, id _Nullable result);
     if (_index < self.array.count) {
         while (true) {
             if (self.canceled) return;
-            __block BOOL complete;
+            __block BOOL complete = NO;
             __block BOOL async = NO;
             id obj = [self.array objectAtIndex:_index];
             self.block(obj, _index, _lastResult, ^(id  _Nullable result) {
@@ -206,17 +206,6 @@ typedef void(^promise_result_block)(PromiseState state, id _Nullable result);
         _state = Running;
         _callbacks = [NSMutableArray array];
         _queue = queue;
-        __weak EMPromise *that = self;
-        
-        _then = ^(promise_then_handler block) {
-            return [that then:block];
-        };
-        _catchError = ^(promise_reject_block block) {
-            return [that catchError:block];
-        };
-        _timeout = ^(NSTimeInterval timeout) {
-            return [that timeout:timeout];
-        };
     }
     return self;
 }
@@ -382,6 +371,13 @@ typedef void(^promise_result_block)(PromiseState state, id _Nullable result);
     }];
 }
 
+- (promise_then_block)then {
+    __weak EMPromise *that = self;
+    return ^(promise_then_handler block) {
+        return [that then:block];
+    };
+}
+
 - (EMPromise *)then:(promise_then_handler)block {
     // Start the task if ready not called.
     [self checkStart];
@@ -393,6 +389,13 @@ typedef void(^promise_result_block)(PromiseState state, id _Nullable result);
             reject(error);
         }];
     } queue:_queue];
+}
+
+- (promise_catch_block)catchError {
+    __weak EMPromise *that = self;
+    return ^(promise_reject_block block) {
+        return [that catchError:block];
+    };
 }
 
 - (EMPromise *)catchError:(promise_reject_block)block {
@@ -416,6 +419,13 @@ typedef void(^promise_result_block)(PromiseState state, id _Nullable result);
         }
     }];
     return self;
+}
+
+- (promise_timeout_block)timeout {
+    __weak EMPromise *that = self;
+    return ^(NSTimeInterval timeout) {
+        return [that timeout:timeout];
+    };
 }
 
 - (EMPromise *)timeout:(NSTimeInterval)timeout {
