@@ -16,7 +16,7 @@ Pod::Spec.new do |spec|
   #
 
   spec.name         = "EMPromise"
-  spec.version      = "0.0.3"
+  spec.version      = "0.0.4"
   spec.summary      = "A promise framework for Objective-C."
 
   # This description is used to generate tags and improve search results.

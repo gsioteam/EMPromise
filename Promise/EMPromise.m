@@ -165,6 +165,10 @@ typedef void(^promise_result_block)(PromiseState state, id _Nullable result);
     }];
 }
 
+- (void)clean {
+    self.block = nil;
+}
+
 @end
 
 @interface EMTimeoutPromise : EMPromise
@@ -254,8 +258,7 @@ typedef void(^promise_result_block)(PromiseState state, id _Nullable result);
 + (instancetype)resolve:(id)result queue:(dispatch_queue_t)queue {
     EMPromise *promise = [[self alloc] initWithQueue:queue];
     if ([result isKindOfClass:EMPromise.class]) {
-        [promise ready];
-        [promise runPromise:result];
+        [promise.ready runPromise:result];
         return promise;
     } else {
         promise.state = Resolved;
