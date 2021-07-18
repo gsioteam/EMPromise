@@ -103,14 +103,13 @@ typedef void(^promise_result_block)(PromiseState state, id _Nullable result);
     if (_index < self.array.count) {
         while (true) {
             if (self.canceled) return;
-            __block BOOL complete = NO;
-            __block BOOL async = NO;
-            id obj = [self.array objectAtIndex:_index];
+            __block int status = 0;
+            id obj = self.array[_index];
             self.block(obj, _index, _lastResult, ^(id  _Nullable result) {
-                complete = true;
+                status |= 1;
                 ++_index;
                 _lastResult = result;
-                if (async) {
+                if (status & 2) {
                     if (strcmp(dispatch_queue_get_label(DISPATCH_CURRENT_QUEUE_LABEL), dispatch_queue_get_label(self.queue)) == 0) {
                         [self next];
                     } else {
@@ -122,13 +121,13 @@ typedef void(^promise_result_block)(PromiseState state, id _Nullable result);
             }, ^(NSError * _Nonnull error) {
                 [self rejectWithError:error];
             });
-            if (complete) {
+            if (status & 1) {
                 if (_index >= self.array.count) {
                     [self resolveWithResult:_lastResult];
                     return;
                 }
             } else {
-                async = YES;
+                status |= 2;
                 break;
             }
         }

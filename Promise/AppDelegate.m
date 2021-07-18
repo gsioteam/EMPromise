@@ -48,15 +48,26 @@
         [arr addObject:@(i)];
     }
     
+    NSTimeInterval _old = [NSDate date].timeIntervalSince1970;
     [EMPromise forEach:arr block:^(id  _Nonnull obj, NSUInteger idx, id  _Nonnull lastResult, promise_resolve_block  _Nonnull resolve, promise_reject_block  _Nonnull reject) {
-        NSInteger sum = [lastResult integerValue] + [obj integerValue];
-        resolve(@(sum));
+        resolve(@([lastResult integerValue] + [obj integerValue]));
     }].then(^id _Nullable(id  _Nullable result) {
         NSLog(@"result: %@", result);
         return nil;
     }).catchError(^(NSError *error) {
         NSLog(@"error %@", error);
     });
+    
+//    __block NSNumber *sum = @(0);
+//    void (^block)(NSNumber *i) = ^(NSNumber *i){
+//        sum = @(i.integerValue + sum.integerValue);
+//    };
+//    for (NSInteger i = 0; i < arr.count; ++i) {
+//        block(arr[i]);
+//    }
+//    NSLog(@"result: %@", sum);
+    
+    NSLog(@"Using: %f", [NSDate date].timeIntervalSince1970 - _old);
     
     return YES;
 }
