@@ -28,8 +28,8 @@ typedef void(^promise_block)(promise_resolve_block resolve, promise_reject_block
 typedef id _Nullable (^promise_then_handler)(id _Nullable result);
 
 typedef EMPromise*_Nonnull(^promise_then_block)(promise_then_handler block);
-typedef __kindof EMPromise*_Nonnull(^promise_catch_block)(promise_reject_block block);
-typedef __kindof EMPromise*_Nonnull(^promise_timeout_block)(NSTimeInterval timeout);
+typedef EMPromise*_Nonnull(^promise_catch_block)(promise_reject_block block);
+typedef EMPromise*_Nonnull(^promise_timeout_block)(NSTimeInterval timeout);
 
 @interface EMPromise : NSObject
 
@@ -47,16 +47,19 @@ typedef __kindof EMPromise*_Nonnull(^promise_timeout_block)(NSTimeInterval timeo
  * Call ready after all arguments ready.
  * reutn self
  */
-@property (nonatomic, readonly) __kindof EMPromise *ready;
+@property (nonatomic, readonly) EMPromise *ready;
 
 - (EMPromise *)then:(promise_then_handler)block;
-- (__kindof EMPromise *)catchError:(promise_reject_block)block;
+- (EMPromise *)catchError:(promise_reject_block)block;
 
 /**
  * Timeout return self, that means each promise could have a timer.
  * And promise could cancel its task instantly to avoid wasting resources when timeout.
  */
-- (__kindof EMPromise *)timeout:(NSTimeInterval)timeout;
+- (EMPromise *)timeout:(NSTimeInterval)timeout;
+
++ (instancetype)promise:(promise_block)block;
++ (instancetype)promise:(promise_block)block queue:(dispatch_queue_t)queue;
 
 @end
 
@@ -91,21 +94,18 @@ typedef __kindof EMPromise*_Nonnull(^promise_timeout_block)(NSTimeInterval timeo
 
 typedef void(^promise_for_each_block)(id  _Nonnull obj, NSUInteger idx, id lastResult, promise_resolve_block resolve, promise_reject_block reject);
 
-@interface EMPromise (ExtensionConstructors)
+@interface EMPromise (ExtensionCustuctors)
 
 + (instancetype)resolve:(id _Nullable)result;
 + (instancetype)resolve:(id _Nullable)result queue:(dispatch_queue_t)queue;
 + (instancetype)reject:(NSError *)error;
 + (instancetype)reject:(NSError *)error queue:(dispatch_queue_t)queue;
 
-+ (EMPromise *)promise:(promise_block)block;
-+ (EMPromise *)promise:(promise_block)block queue:(dispatch_queue_t)queue;
++ (instancetype)wait:(NSTimeInterval)time;
++ (instancetype)wait:(NSTimeInterval)time queue:(dispatch_queue_t)queue;
 
-+ (EMPromise *)wait:(NSTimeInterval)time;
-+ (EMPromise *)wait:(NSTimeInterval)time queue:(dispatch_queue_t)queue;
-
-+ (EMPromise *)forEach:(NSArray * _Nullable)array block:(promise_for_each_block)block;
-+ (EMPromise *)forEach:(NSArray * _Nullable)array block:(promise_for_each_block)block queue:(dispatch_queue_t)queue;
++ (instancetype)forEach:(NSArray * _Nullable)array block:(promise_for_each_block)block;
++ (instancetype)forEach:(NSArray * _Nullable)array block:(promise_for_each_block)block queue:(dispatch_queue_t)queue;
 
 @end
 

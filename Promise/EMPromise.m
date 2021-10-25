@@ -19,8 +19,7 @@ typedef enum {
 @implementation EMTimeoutError
 
 - (id)init {
-    self = [super initWithDomain:@"Timeout"
-                            code:1005
+    self = [super initWithDomain:@"Timeout" code:1005
                         userInfo:nil];
     return self;
 }
@@ -79,6 +78,17 @@ typedef enum {
 
 typedef void(^promise_result_block)(PromiseState state, id _Nullable result);
 
+@interface EMPromise()
+
+@property (nonatomic, assign) PromiseState state;
+// To retain self when task is running.
+@property (nonatomic, strong) EMPromise *selfRef;
+@property (nonatomic, strong) id result;
+@property (nonatomic, strong) NSMutableArray<promise_result_block> *callbacks;
+@property (nonatomic, strong) EMTimeout *timeoutHandler;
+
+@end
+
 @interface EMForPromise : EMPromise
 
 @property (nonatomic, strong) NSArray *array;
@@ -87,6 +97,8 @@ typedef void(^promise_result_block)(PromiseState state, id _Nullable result);
 @property (atomic, assign) BOOL canceled;
 
 @end
+
+typedef void(^EMCallBlock)(id result);
 
 @implementation EMForPromise {
     NSInteger _index;
@@ -103,31 +115,44 @@ typedef void(^promise_result_block)(PromiseState state, id _Nullable result);
     if (_index < self.array.count) {
         while (true) {
             if (self.canceled) return;
-            __block int status = 0;
-            id obj = self.array[_index];
+            __block BOOL complete = NO;
+            __block BOOL async = NO;
+            id obj = [self.array objectAtIndex:_index];
             self.block(obj, _index, _lastResult, ^(id  _Nullable result) {
-                status |= 1;
                 ++_index;
-                _lastResult = result;
-                if (status & 2) {
-                    if (strcmp(dispatch_queue_get_label(DISPATCH_CURRENT_QUEUE_LABEL), dispatch_queue_get_label(self.queue)) == 0) {
-                        [self next];
-                    } else {
-                        dispatch_async(self.queue, ^{
+                
+                EMCallBlock block = ^(id result) {
+                    _lastResult = result;
+                    complete = true;
+                    if (async) {
+                        if (strcmp(dispatch_queue_get_label(DISPATCH_CURRENT_QUEUE_LABEL), dispatch_queue_get_label(self.queue)) == 0) {
                             [self next];
-                        });
+                        } else {
+                            dispatch_async(self.queue, ^{
+                                [self next];
+                            });
+                        }
                     }
+                };
+                
+                if ([result isKindOfClass:EMPromise.class]) {
+                    ((EMPromise *)result).then(^id _Nullable(id  _Nullable result) {
+                        block(result);
+                        return nil;
+                    });
+                } else {
+                    block(result);
                 }
             }, ^(NSError * _Nonnull error) {
                 [self rejectWithError:error];
             });
-            if (status & 1) {
+            if (complete) {
                 if (_index >= self.array.count) {
                     [self resolveWithResult:_lastResult];
                     return;
                 }
             } else {
-                status |= 2;
+                async = YES;
                 break;
             }
         }
@@ -165,10 +190,6 @@ typedef void(^promise_result_block)(PromiseState state, id _Nullable result);
     }];
 }
 
-- (void)clean {
-    self.block = nil;
-}
-
 @end
 
 @interface EMTimeoutPromise : EMPromise
@@ -181,21 +202,12 @@ typedef void(^promise_result_block)(PromiseState state, id _Nullable result);
 
 - (void)run {
     __weak EMTimeoutPromise *that = self;
+    
+    self.selfRef = self;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(self.wait * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         [that resolveWithResult:nil];
     });
 }
-
-@end
-
-@interface EMPromise()
-
-@property (nonatomic, assign) PromiseState state;
-// To retain self when task is running.
-@property (nonatomic, strong) EMPromise *selfRef;
-@property (nonatomic, strong) id result;
-@property (nonatomic, strong) NSMutableArray<promise_result_block> *callbacks;
-@property (nonatomic, strong) EMTimeout *timeoutHandler;
 
 @end
 
@@ -208,6 +220,17 @@ typedef void(^promise_result_block)(PromiseState state, id _Nullable result);
         _state = Running;
         _callbacks = [NSMutableArray array];
         _queue = queue;
+        __weak EMPromise *that = self;
+        
+        _then = ^(promise_then_handler block) {
+            return [that then:block];
+        };
+        _catchError = ^(promise_reject_block block) {
+            return [that catchError:block];
+        };
+        _timeout = ^(NSTimeInterval timeout) {
+            return [that timeout:timeout];
+        };
     }
     return self;
 }
@@ -231,21 +254,21 @@ typedef void(^promise_result_block)(PromiseState state, id _Nullable result);
     return self;
 }
 
-+ (EMPromise *)promise:(promise_block)block {
++ (instancetype)promise:(promise_block)block {
     return [self promise:block queue:dispatch_get_main_queue()];
 }
 
-+ (EMPromise *)promise:(promise_block)block queue:(dispatch_queue_t)queue {
++ (instancetype)promise:(promise_block)block queue:(dispatch_queue_t)queue {
     EMBlockPromise *promise = [[EMBlockPromise alloc] initWithQueue:queue];
     promise.block = block;
     return promise.ready;
 }
 
-+ (EMPromise *)wait:(NSTimeInterval)time {
++ (instancetype)wait:(NSTimeInterval)time {
     return [self wait:time queue:dispatch_get_main_queue()];
 }
 
-+ (EMPromise *)wait:(NSTimeInterval)time queue:(nonnull dispatch_queue_t)queue {
++ (instancetype)wait:(NSTimeInterval)time queue:(nonnull dispatch_queue_t)queue {
     EMTimeoutPromise *promise = [[EMTimeoutPromise alloc] initWithQueue:queue];
     promise.wait = time;
     return promise.ready;
@@ -257,14 +280,9 @@ typedef void(^promise_result_block)(PromiseState state, id _Nullable result);
 
 + (instancetype)resolve:(id)result queue:(dispatch_queue_t)queue {
     EMPromise *promise = [[self alloc] initWithQueue:queue];
-    if ([result isKindOfClass:EMPromise.class]) {
-        [promise.ready runPromise:result];
-        return promise;
-    } else {
-        promise.state = Resolved;
-        promise.result = result;
-        return promise.ready;
-    }
+    promise.state = Resolved;
+    promise.result = result;
+    return promise.ready;
 }
 
 + (instancetype)reject:(NSError *)error {
@@ -278,13 +296,13 @@ typedef void(^promise_result_block)(PromiseState state, id _Nullable result);
     return promise.ready;
 }
 
-+ (EMPromise *)forEach:(NSArray *)array block:(promise_for_each_block)block {
++ (instancetype)forEach:(NSArray *)array block:(promise_for_each_block)block {
     return [self forEach:array
                    block:block
                    queue:dispatch_get_main_queue()];
 }
 
-+ (EMPromise *)forEach:(NSArray *)array block:(promise_for_each_block)block queue:(dispatch_queue_t)queue {
++ (instancetype)forEach:(NSArray *)array block:(promise_for_each_block)block queue:(dispatch_queue_t)queue {
     if (array.count > 0) {
         EMForPromise *promise = [[EMForPromise alloc] initWithQueue:queue];
         promise.array = array;
@@ -378,13 +396,6 @@ typedef void(^promise_result_block)(PromiseState state, id _Nullable result);
     }];
 }
 
-- (promise_then_block)then {
-    __weak EMPromise *that = self;
-    return ^(promise_then_handler block) {
-        return [that then:block];
-    };
-}
-
 - (EMPromise *)then:(promise_then_handler)block {
     // Start the task if ready not called.
     [self checkStart];
@@ -396,13 +407,6 @@ typedef void(^promise_result_block)(PromiseState state, id _Nullable result);
             reject(error);
         }];
     } queue:_queue];
-}
-
-- (promise_catch_block)catchError {
-    __weak EMPromise *that = self;
-    return ^(promise_reject_block block) {
-        return [that catchError:block];
-    };
 }
 
 - (EMPromise *)catchError:(promise_reject_block)block {
@@ -426,13 +430,6 @@ typedef void(^promise_result_block)(PromiseState state, id _Nullable result);
         }
     }];
     return self;
-}
-
-- (promise_timeout_block)timeout {
-    __weak EMPromise *that = self;
-    return ^(NSTimeInterval timeout) {
-        return [that timeout:timeout];
-    };
 }
 
 - (EMPromise *)timeout:(NSTimeInterval)timeout {
