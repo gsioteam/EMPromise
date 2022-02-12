@@ -139,6 +139,8 @@ typedef void(^EMCallBlock)(id result);
                     ((EMPromise *)result).then(^id _Nullable(id  _Nullable result) {
                         block(result);
                         return nil;
+                    }).catchError(^(NSError *error) {
+                        [self rejectWithError:error];
                     });
                 } else {
                     block(result);
